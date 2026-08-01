@@ -1,3 +1,4 @@
 .venv
 tmp/
 __py__cache__
+**/__pycache__
