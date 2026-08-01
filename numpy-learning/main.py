@@ -216,6 +216,8 @@ if __name__ == "__main__":
     print('Row vector afer: ', row_vector)
     
     
+    
+    
 
     
 
