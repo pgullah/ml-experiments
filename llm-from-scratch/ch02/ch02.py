@@ -4,6 +4,9 @@ import urllib.request
 from tokenizer import SimpleTokenizerV1
 from importlib.metadata import version
 import tiktoken
+from dataset import GPTDatasetV1, create_dataloader_v1
+import torch
+from torch.utils.data import DataLoader
 
 def build_corpus():
     file_path = "/var/tmp/data/llm-from-scratch/ch02/the-verdict.txt"
@@ -19,7 +22,7 @@ def build_corpus():
     return raw_text
 
 
-def main():
+def run_naive_encoder():
     corpus = build_corpus()
     print("Total number of characters in the text:", len(corpus))
     print("raw text at index:", corpus[:99])
@@ -57,7 +60,10 @@ def main():
     print(text)
     print(bpe_tokenizer.encode(text))
     print(bpe_tokenizer.decode(bpe_tokenizer.encode(text)))
+    
 
+def run_bpe_encoder():
+    corpus = build_corpus()
     print("\n#### Encoding a new text with BPE Tokenizer")
     
     print("tiktoken version:", version("tiktoken"))
@@ -95,5 +101,85 @@ def main():
         print(f"{context} ({bpe_tokenizer.decode(context)}) ----> {desired} ({bpe_tokenizer.decode([desired])})")
 
 
+def run_gpt_encoder(batch_size=1, max_length=4, stride=1, suffle=False):
+    corpus = build_corpus()
+    print("\n#### Encoding a new text with GPT Tokenizer")
+    dataloader = create_dataloader_v1(
+        corpus, batch_size=batch_size, max_length=max_length, stride=stride, shuffle=suffle
+    )
+    data_iter = iter(dataloader)
+    first_batch = next(data_iter)
+    print("first_batch:\n", first_batch)
+    print("input_ids shape:\n", type(first_batch[0][0]).shape)
+    
+    second_batch = next(data_iter)
+    print("second_batch:\n", second_batch)
+
+
+def toy_example():
+    input_ids = torch.tensor([2, 3, 5, 1])
+    vocab_size = 6
+    output_dim = 3
+    
+    torch.manual_seed(123)
+    embedding_layer = torch.nn.Embedding(vocab_size, output_dim)
+    # returns 6 X 3 Matrix ie., 6 possible tokens (vocab_size) with 3 values (output_dim)
+    print("embedding layer weight: ", embedding_layer.weight)
+    
+    # sample tensor with a single token ID
+    sample_tensor = torch.tensor([3])
+    print("Sample tensor: ", sample_tensor)
+    print("Sample tensor shape: ", sample_tensor.shape)
+    lookup_result = embedding_layer(sample_tensor)
+    print("Lookup result: ", lookup_result)
+    print("Lookup shape:", lookup_result.shape)
+    
+    print("\n### Lookup with multiple token IDs")
+    # since the vocab_size is 6, we can use token IDs from 0 to 5 
+    # other than 6 or more which will throw an error
+    # But with in this possible vocab_size, 
+    # we can use any combination  or any number of token IDs to lookup the embedding values
+    multiple_tokens = torch.tensor([2, 3, 5, 1, 0,])
+    print("Multiple tokens: ", multiple_tokens)
+    lookup_result_multiple = embedding_layer(multiple_tokens)
+    print("Lookup result: ", lookup_result_multiple)
+    print("Lookup shape:", lookup_result_multiple.shape)
+    
+
+def positional_embedding_example():
+    vocab_size = 50257
+    output_dim = 256
+    token_embedding_layer = torch.nn.Embedding(vocab_size, output_dim)
+    raw_text = build_corpus()
+    max_length = 4
+    dataloader = create_dataloader_v1(
+    raw_text, batch_size=8, max_length=max_length,
+    stride=max_length, shuffle=False
+    )
+    data_iter = iter(dataloader)
+    inputs, targets = next(data_iter)
+    print("Token IDs:\n", inputs)
+    print("\nInputs shape:\n", inputs.shape)
+
 if __name__ == "__main__":
-    main()
+    # run_naive_encoder()
+    # run_bpe_encoder()
+    # run_gpt_encoder(
+    #     batch_size=1,
+    #     max_length=4, stride=1
+    # )
+    
+    # run_gpt_encoder(
+    #     batch_size=2,
+    #     max_length=2, stride=2
+    # )
+    
+    # run_gpt_encoder(
+    #     batch_size=8,
+    #     max_length=4, stride=4
+    # )
+    
+    # toy_example()
+    positional_embedding_example()
+    
+    
