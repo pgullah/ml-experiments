@@ -1,0 +1,15 @@
+[project]
+name = "ai-travel-agent"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "ddgs>=9.16.0",
+    "langchain>=1.3.17",
+    "langchain-community>=0.4.2",
+    "langchain-openai>=1.6.0",
+    "langchain-openrouter>=0.2.8",
+    "langgraph>=1.2.11",
+    "requests>=2.34.2",
+]
