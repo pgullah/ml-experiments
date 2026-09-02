@@ -4,11 +4,11 @@ import traceback
 
 
 def load_llm(conf: ConfigProvider):
-    apiKeys = conf.get_api_keys()
     # ChatOpenAI(model = 'o3-mini', openai_api_key = self.config.get('openai_api_key'))
     model = 'openrouter/free'
     print(f"Intializing LLM Provider: OpenRouter with model={model}")
+    api_conf = conf.openrouter_api()
     try:
-        return ChatOpenRouter(model = model, api_key = apiKeys.openrouter_api_key)
+        return ChatOpenRouter(model = model, api_key = api_conf.api_key)
     except Exception as e:
         raise SystemError("Failed to load LLM provider") from e

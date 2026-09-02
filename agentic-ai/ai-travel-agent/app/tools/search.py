@@ -6,7 +6,6 @@ from langchain_community.utilities import GoogleSerperAPIWrapper
 from langchain_community.tools import  DuckDuckGoSearchRun
 from langchain_community.tools.tavily_search import TavilySearchResults
 from app.common.config import ConfigProvider
-from collections.abc import Callable
 from typing import Any
 
 @dataclass(frozen=True)
@@ -52,7 +51,6 @@ class SearchTool:
         # print("Prioriized providers: ", prioritized_search_providers)
         for sp in self._prioritized_search_providers:
             try:
-                print(f">>>>> Using search provider: {sp.key}")
                 return sp.instance.invoke(query)
             except Exception as e:
                 import traceback

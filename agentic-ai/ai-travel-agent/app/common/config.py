@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from app.common.models import ApiKeys, WeatherApiConfig
+from app.common.models import ApiKeys, OpenRouteApiConfig, WeatherApiConfig
 
 ## Config Class
 
@@ -12,7 +12,9 @@ class ConfigProvider:
     
     def weather_api(self) -> WeatherApiConfig:
         return WeatherApiConfig(api_key= self.get_api_keys().weather_api_key, api_url= os.getenv("OPENWEATHERMAP_API_URL", 'https://api.openweathermap.org/data/2.5/'))
-        
+    
+    def openrouter_api(self) -> OpenRouteApiConfig:
+        return OpenRouteApiConfig(api_key=os.getenv('OPENROUTER_API_KEY'), model=os.getenv('OPENROUTER_MODEL'))
     
     def get_api_keys(self) -> ApiKeys:
         '''
