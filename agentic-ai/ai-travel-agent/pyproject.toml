@@ -11,5 +11,8 @@ dependencies = [
     "langchain-openai>=1.6.0",
     "langchain-openrouter>=0.2.8",
     "langgraph>=1.2.11",
+    "openai>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "pyyaml>=6.0.0",
     "requests>=2.34.2",
 ]

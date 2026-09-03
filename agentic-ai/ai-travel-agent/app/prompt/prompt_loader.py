@@ -10,10 +10,11 @@ def load_prompts():
     for file in _prompt_dir().glob("*.md"):
         text = file.read_text()
 
-        # Split YAML front matter from prompt body
-        _, metadata, prompt = text.split("---", 2)
-
-        data = yaml.safe_load(metadata)
+        data = {"id": file.stem}
+        prompt = text
+        if text.startswith("---"):
+            _, metadata, prompt = text.split("---", 2)
+            data.update(yaml.safe_load(metadata) or {})
 
         data["prompt"] = prompt.strip()
         data["file"] = str(file)
@@ -23,10 +24,10 @@ def load_prompts():
     return prompts
 
 def load_raw_prompt(prompt_file: str = "system-prompt.md"):
-    return _prompt_dir().joinpath(prompt_file).read_text(encoding="utf-8")
+    return _prompt_dir().joinpath(prompt_file).read_text(encoding="utf-8").strip()
 
 
 @lru_cache()
 def _prompt_dir() -> Path:
-    return os.environ.get("PROMPT_DIR", Path(__file__).resolve().parent.parent.parent.joinpath("prompts"))
-     
+    configured_dir = os.environ.get("PROMPT_DIR")
+    return Path(configured_dir) if configured_dir else Path(__file__).resolve().parent.parent.parent / "prompts"

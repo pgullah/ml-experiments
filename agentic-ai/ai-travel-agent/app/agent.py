@@ -5,16 +5,18 @@ from app.prompt.prompt_loader import load_raw_prompt
 
 from app.planner import TravelPlanner
 from langgraph.checkpoint.memory import InMemorySaver
+from app.guard.policy import travel_domain_guard
 
 
 class Agent:
     
-    def __init__(self, planner: TravelPlanner):
+    def __init__(self, planner: TravelPlanner, checkpointer=None):
         self.planner=planner
+        self.llm = self.planner.llm
         self.llm_with_tools = self.planner.llm_with_tools
         self._system_prompt = SystemMessage(content=load_raw_prompt())
         # Create a memory saver to store the state of the conversation
-        self.memory_saver = InMemorySaver()
+        self.checkpointer = checkpointer or InMemorySaver()
         self._agent_graph = self._build_agent_graph()
     
     def _build_agent_graph(self):
@@ -59,13 +61,9 @@ class Agent:
             }
         )
         builder.add_edge('tools','LLM_Decision_Step')
-        return builder.compile(checkpointer=self.memory_saver)
+        return builder.compile(checkpointer=self.checkpointer)
     
-    def answer(self, query: str):
-        response_state = self._agent_graph.invoke({'messages': [HumanMessage(content=query)]})
-        # The final output is the content of the last message in the state
-        return response_state['messages'][-1].content
-    
+    @travel_domain_guard(confidence_threshold=0.8)
     def chat(self, query: str, thread_id: str):
         config = {
             "configurable": {
@@ -73,9 +71,9 @@ class Agent:
             }
         }
         # Invoke the agent graph with the initial query and the memory saver
-        response_state = self._agent_graph.invoke({'messages': [HumanMessage(content=query)]},
-                                                  config=config,
-                                                  memory_saver=self.memory_saver)
+        response_state = self._agent_graph.invoke(
+            {'messages': [HumanMessage(content=query)]},
+            config=config,
+        )
         # The final output is the content of the last message in the state
         return response_state['messages'][-1].content
-    
