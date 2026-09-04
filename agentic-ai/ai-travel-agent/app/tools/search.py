@@ -4,7 +4,7 @@ from typing import Any, Protocol, Sequence
 from ddgs import DDGS
 import requests
 from app.common.config import AppSettings
-from app.common.exceptions import ServiceError
+from app.common.errors import ServiceError
 
 logger = logging.getLogger(__name__)
 
