@@ -1,11 +1,11 @@
 import logging
 from typing import  List,Optional, Any, Dict
-from app.tools.search import SearchTool
+from app.tools.search import SearchService
 from pydantic import BaseModel, Field
 from langchain.tools import tool
 
 from app.common.llm_loader import load_llm
-from app.common.config import ConfigProvider
+from app.common.config import AppSettings
 from app.tools.weather import WeatherTool
 from app.tools.budget import BudgetingTool
 from app.tools.currency import CurrencyTool
@@ -39,14 +39,15 @@ class FullItinearyInput(BaseModel):
 logger = logging.getLogger(__name__)
 class TravelPlanner:
     
-    def __init__(self, config: ConfigProvider):
+    def __init__(self, settings: AppSettings):
         print("Initializing travel planner")
-        self.weather_service = WeatherTool(config)
-        self.currency_converter  = CurrencyTool()
+        self.settings = settings
+        self.weather_service = WeatherTool(settings)
+        self.currency_converter = CurrencyTool(settings)
         self.calculator = BudgetingTool()
-        self.search_tool = SearchTool(config)
+        self.search_tool = SearchService(settings)
         print("Loading llm")
-        self.llm = load_llm(config)
+        self.llm = load_llm(settings)
         print("Initilaizing tools")
         self.tools = self._travel_planning_tools()
         self.llm_with_tools = self.llm.bind_tools(self.tools)
@@ -70,8 +71,7 @@ class TravelPlanner:
             '''
             query = f'Top tourist attractions in {city}'
             
-            ## Primary Tool: GoogleSerperAPIWrapper
-            ## Secondary Tool: TavilySearchResults
+            ## Search providers use the configured fallback order.
             results = self.search_tool.run(query)
             if results:
                 return f'Top attraction in {city} : {results}'
@@ -89,8 +89,7 @@ class TravelPlanner:
             '''
             query = f'Top restaurants in {city}'
             
-            ## Primary Tool: GoogleSerperAPIWrapper
-            ## Secondary Tool: TavilySearchResults
+            ## Search providers use the configured fallback order.
             try:
                 logger.debug(f"Searching for top restaurants in {city}")
                 results = self.search_tool.run(query)
@@ -110,8 +109,7 @@ class TravelPlanner:
                 str: Search results for top activities in the city.
             '''
             query = f'Top activities in {city}'
-            ## Primary Tool: GoogleSerperAPIWrapper
-            ## Secondary Tool: TavilySearchResults
+            ## Search providers use the configured fallback order.
             try:
                 logger.debug(f"Searching for top activities in {city}")
                 results = self.search_tool.run(query)
@@ -131,8 +129,7 @@ class TravelPlanner:
                 str: Search results for means of transportation in the city.
             '''
             query = f'Means of transport in {city}'
-            ## Primary Tool: GoogleSerperAPIWrapper
-            ## Secondary Tool: DuckDuckGoSearchRun
+            ## Search providers use the configured fallback order.
             logger.debug(f"Searching for means of transport in {city}")
             try:
                 results = self.search_tool.run(query)
@@ -197,8 +194,7 @@ class TravelPlanner:
             if check_in_date and check_out_date:
                 query += f' from {check_in_date} to {check_out_date}'
             query += '. Name of hotel and current price per night booking availability'            
-            ## Primary Tool: GoogleSerperAPIWrapper
-            ## Secondary Tool: DuckDuckGoSearchRun
+            ## Search providers use the configured fallback order.
             try:
                 logger.info(f"Searching for hotels in {city} from {check_in_date} to {check_out_date}")
                 results = self.search_tool.run(query)

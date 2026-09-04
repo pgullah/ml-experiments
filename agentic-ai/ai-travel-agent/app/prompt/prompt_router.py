@@ -1,16 +1,18 @@
 import json
-import os
 
 from openai import OpenAI
 
+from app.common.config import AppSettings
 from app.prompt.prompt_loader import load_prompts
 
 
-def route(user_request):
+def route(user_request: str, settings: AppSettings):
+    if settings.openai_api_key is None:
+        raise ValueError("OPENAI_API_KEY is required to use the prompt router")
 
     registry = [
         {key: value for key, value in prompt.items() if key not in {"prompt", "file"}}
-        for prompt in load_prompts()
+        for prompt in load_prompts(settings)
     ]
 
     router_prompt = """
@@ -39,8 +41,10 @@ Available prompts:
 
 """ + json.dumps(registry, indent=2)
 
-    response = OpenAI().chat.completions.create(
-        model=os.environ.get("OPENAI_MODEL", "gpt-5.6"),
+    response = OpenAI(
+        api_key=settings.openai_api_key.get_secret_value()
+    ).chat.completions.create(
+        model=settings.openai_model,
         messages=[
             {
                 "role": "system",

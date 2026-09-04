@@ -1,12 +1,13 @@
 import requests
 from typing import  Any, Dict
-from app.common.config import ConfigProvider
+from app.common.config import AppSettings
 
 
 class WeatherTool:
-    def __init__(self, conf: ConfigProvider):
-        self.api_key = conf.weather_api().api_key
-        self.base_url = conf.weather_api().api_url.rstrip("/")
+    def __init__(self, settings: AppSettings):
+        self.api_key = settings.openweathermap_api_key.get_secret_value()
+        self.base_url = str(settings.openweathermap_api_url).rstrip("/")
+        self.request_timeout = settings.request_timeout_seconds
         
     def get_weather(self, city: str) -> Dict[str, Any]:
         ''' Get the current weather for a given city.'''
@@ -15,7 +16,7 @@ class WeatherTool:
             response = requests.get(
                 self.url,
                 params={"q": city, "units": "metric", "appid": self.api_key},
-                timeout=10,
+                timeout=self.request_timeout,
             )
             response.raise_for_status()
             return response.json()
@@ -33,7 +34,7 @@ class WeatherTool:
             response = requests.get(
                 self.url,
                 params={"q": city, "cnt": num_intervals, "units": "metric", "appid": self.api_key},
-                timeout=10,
+                timeout=self.request_timeout,
             )
             response.raise_for_status()
             return response.json()

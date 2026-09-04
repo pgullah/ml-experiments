@@ -3,11 +3,12 @@ import logging
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langgraph.graph import START, END, MessagesState, StateGraph
 from langgraph.prebuilt import ToolNode
+from app.common.config import AppSettings
 from app.prompt.prompt_loader import load_raw_prompt
 
 from app.planner import TravelPlanner
 from langgraph.checkpoint.memory import InMemorySaver
-from app.guard.policy import travel_domain_guard
+from app.guard_rails.policy import travel_domain_guard
 
 
 logger = logging.getLogger(__name__)
@@ -20,9 +21,10 @@ class Agent:
     
     def __init__(self, planner: TravelPlanner, checkpointer=None):
         self.planner=planner
+        self.settings: AppSettings = planner.settings
         self.llm = self.planner.llm
         self.llm_with_tools = self.planner.llm_with_tools
-        self._system_prompt = SystemMessage(content=load_raw_prompt())
+        self._system_prompt = SystemMessage(content=load_raw_prompt(settings=self.settings))
         # Create a memory saver to store the state of the conversation
         self.checkpointer = checkpointer or InMemorySaver()
         self._agent_graph = self._build_agent_graph()

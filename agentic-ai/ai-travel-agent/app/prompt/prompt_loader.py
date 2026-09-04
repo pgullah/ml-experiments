@@ -1,13 +1,14 @@
 from functools import lru_cache
 from pathlib import Path
 import yaml
-import os
+
+from app.common.config import AppSettings
 
 
-def load_prompts():
+def load_prompts(settings: AppSettings | None = None):
     prompts = []
 
-    for file in _prompt_dir().glob("*.md"):
+    for file in _prompt_dir(settings.prompt_dir if settings else None).glob("*.md"):
         text = file.read_text()
 
         data = {"id": file.stem}
@@ -23,11 +24,14 @@ def load_prompts():
 
     return prompts
 
-def load_raw_prompt(prompt_file: str = "system-prompt.md"):
-    return _prompt_dir().joinpath(prompt_file).read_text(encoding="utf-8").strip()
+def load_raw_prompt(
+    prompt_file: str = "system-prompt.md",
+    settings: AppSettings | None = None,
+):
+    prompt_dir = settings.prompt_dir if settings else None
+    return _prompt_dir(prompt_dir).joinpath(prompt_file).read_text(encoding="utf-8").strip()
 
 
 @lru_cache()
-def _prompt_dir() -> Path:
-    configured_dir = os.environ.get("PROMPT_DIR")
-    return Path(configured_dir) if configured_dir else Path(__file__).resolve().parent.parent.parent / "prompts"
+def _prompt_dir(configured_dir: Path | None = None) -> Path:
+    return configured_dir or Path(__file__).resolve().parent.parent.parent / "prompts"

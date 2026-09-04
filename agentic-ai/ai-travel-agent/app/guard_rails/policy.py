@@ -1,20 +1,16 @@
 from enum import Enum
 import json
 import logging
-import os
 from typing import Literal
 from functools import wraps
 from typing import Callable
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
+from app.common.config import AppSettings
 from app.prompt.prompt_loader import load_raw_prompt
 
 
 logger = logging.getLogger(__name__)
-MAX_CONTEXT_MESSAGES = int(os.getenv("MAX_CONTEXT_MESSAGES", 5))
-MAX_CONTEXT_CHARACTERS = int(os.getenv("MAX_CONTEXT_CHARACTERS", 4_000))
-MAX_REQUEST_CHARACTERS = int(os.getenv("MAX_REQUEST_CHARACTERS", 4_000))
-
 class DomainDecision(str, Enum):
     """
     Enum representing the possible decisions for a domain.
@@ -22,7 +18,7 @@ class DomainDecision(str, Enum):
     IN_SCOPE = "in_scope"
     OUT_OF_SCOPE = "out_of_scope"
     UNSAFE = "unsafe"
-    AMIBIGUOUS = "ambiguous"
+    AMBIGUOUS = "ambiguous"
     
 
 class DomainClassification(BaseModel):
@@ -44,7 +40,6 @@ TRAVEL_REFUSAL = (
 )
 
 def travel_domain_guard(confidence_threshold: float = 0.8,) -> Callable:
-    domain_classifier_prompt = SystemMessage(content=load_raw_prompt(prompt_file="domain-classifier-prompt.md"))
     def decorator(method: Callable) -> Callable:
         @wraps(method)
         def wrapper(self, query: str, *args, **kwargs):
@@ -52,14 +47,21 @@ def travel_domain_guard(confidence_threshold: float = 0.8,) -> Callable:
                 raise AttributeError(
                     "The class must have 'llm' attribute."
                 )
+            settings: AppSettings = self.settings
+            domain_classifier_prompt = SystemMessage(
+                content=load_raw_prompt(
+                    prompt_file="domain-classifier-prompt.md",
+                    settings=settings,
+                )
+            )
             thread_id = kwargs.get("thread_id") or (args[0] if args else "default")
             context_by_thread = getattr(self, "_domain_context_by_thread", None)
             if context_by_thread is None:
                 context_by_thread = {}
                 self._domain_context_by_thread = context_by_thread
 
-            recent_context = context_by_thread.get(thread_id, [])[-MAX_CONTEXT_MESSAGES:]
-            context_budget = MAX_CONTEXT_CHARACTERS
+            recent_context = context_by_thread.get(thread_id, [])[-settings.max_context_messages:]
+            context_budget = settings.max_context_characters
             bounded_context = []
             for previous_query in reversed(recent_context):
                 bounded_query = previous_query[-context_budget:]
@@ -69,7 +71,7 @@ def travel_domain_guard(confidence_threshold: float = 0.8,) -> Callable:
                     break
             classification_input = {
                 "recent_accepted_travel_requests": list(reversed(bounded_context)),
-                "current_request": query[:MAX_REQUEST_CHARACTERS],
+                "current_request": query[:settings.max_request_characters],
             }
             serialized_input = json.dumps(classification_input, ensure_ascii=False)
 
@@ -94,7 +96,7 @@ def travel_domain_guard(confidence_threshold: float = 0.8,) -> Callable:
 
             result = method(self, query, *args, **kwargs)
             context_by_thread.setdefault(thread_id, []).append(query)
-            context_by_thread[thread_id] = context_by_thread[thread_id][-MAX_CONTEXT_MESSAGES:]
+            context_by_thread[thread_id] = context_by_thread[thread_id][-settings.max_context_messages:]
             return result
 
         return wrapper
