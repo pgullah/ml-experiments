@@ -85,6 +85,7 @@ class SearchTool:
             print(f"Unable to register {search_provider.key} provider. Cause: {str(e)}")
     
     def _search(self, query: str):
+        # naive implementation: iterate through the prioritized search providers and return the first successful result
         self._prioritized_search_providers: list[SearchProvider] = lazy_init(self, '_prioritized_search_providers', lambda: sorted(self._search_providers, key=lambda x: x.priority))
         # print("Prioriized providers: ", prioritized_search_providers)
         for sp in self._prioritized_search_providers:

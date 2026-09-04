@@ -2,3 +2,7 @@
 tmp/
 __py__cache__
 **/__pycache__
+**/.env
+.env
+**/.venv/
+**/.venv

@@ -153,13 +153,22 @@ def positional_embedding_example():
     raw_text = build_corpus()
     max_length = 4
     dataloader = create_dataloader_v1(
-    raw_text, batch_size=8, max_length=max_length,
-    stride=max_length, shuffle=False
+        raw_text, batch_size=8, max_length=max_length,
+        stride=max_length, shuffle=False
     )
     data_iter = iter(dataloader)
     inputs, targets = next(data_iter)
     print("Token IDs:\n", inputs)
     print("\nInputs shape:\n", inputs.shape)
+    print("embedding layer", token_embedding_layer(inputs).shape)
+    
+    context_length = max_length
+    pos_embedding_layer = torch.nn.Embedding(context_length, output_dim)
+    postional_ids = torch.arange(context_length)
+    print("Positional IDs:", postional_ids)
+    pos_embeddings = pos_embedding_layer(postional_ids)
+    print("Positional embeddings:\n", pos_embeddings)
+    print("Positional embeddings shape:", pos_embeddings.shape)
 
 if __name__ == "__main__":
     # run_naive_encoder()
@@ -179,7 +188,7 @@ if __name__ == "__main__":
     #     max_length=4, stride=4
     # )
     
-    # toy_example()
+    toy_example()
     positional_embedding_example()
     
     

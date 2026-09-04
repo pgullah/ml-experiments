@@ -1,3 +1,5 @@
+import logging
+
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langgraph.graph import START, END, MessagesState, StateGraph
 from langgraph.prebuilt import ToolNode
@@ -6,6 +8,12 @@ from app.prompt.prompt_loader import load_raw_prompt
 from app.planner import TravelPlanner
 from langgraph.checkpoint.memory import InMemorySaver
 from app.guard.policy import travel_domain_guard
+
+
+logger = logging.getLogger(__name__)
+LLM_ERROR_RESPONSE = (
+    "I'm sorry, but I couldn't process your request right now. Please try again."
+)
 
 
 class Agent:
@@ -36,7 +44,16 @@ class Agent:
             '''
             user_question = state['messages']
             input_question = [self._system_prompt] + user_question
-            response = self.llm_with_tools.invoke(input_question)
+            try:
+                response = self.llm_with_tools.invoke(input_question)
+            except Exception:
+                logger.exception(
+                    "Travel agent LLM invocation failed; returning fallback response "
+                    "(llm_type=%s, conversation_message_count=%d)",
+                    type(self.llm_with_tools).__name__,
+                    len(user_question),
+                )
+                response = AIMessage(content=LLM_ERROR_RESPONSE)
             
             return {'messages':[response]}
         

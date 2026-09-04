@@ -1,12 +1,16 @@
 
 
 from datetime import datetime
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 from app.common.config import ConfigProvider
 from app.planner import TravelPlanner
 from app.agent import Agent
     
 
+# @logging(level=logging.DEBUG)
 def chat(thread_id: str | None = None):
     thread_id = thread_id or f"thread-{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
     configProvider = ConfigProvider()
@@ -16,16 +20,17 @@ def chat(thread_id: str | None = None):
     agent_instance = Agent(planner=planner)
 
     # Invoke the LangGraph agent with memory saver for chat
-    print("Starting agent in chat mode..")
+    logger.info("Starting agent in chat mode..")
     while True:
         user_query = input("You: ")
         if user_query.lower() in ['exit', 'quit']:
-            print("Exiting chat.")
+            logger.info("Exiting chat.")
             break
         response = agent_instance.chat(user_query, thread_id)
-        print("Agent says:")
-        print(response)
+        logger.info("Agent says:")
+        logger.info(response)
         
 
 if __name__ == "__main__":
+    logger.setLevel(logging.ERROR)
     chat()

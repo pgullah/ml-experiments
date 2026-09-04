@@ -1,3 +1,4 @@
+import logging
 from typing import  List,Optional, Any, Dict
 from app.tools.search import SearchTool
 from pydantic import BaseModel, Field
@@ -35,7 +36,7 @@ class FullItinearyInput(BaseModel):
     budget_information: Optional[str] = Field(None,description='An optional budget information for the trip (e.g., Mid-range, Estimated total : XX)')
     overall_weather_summary: Optional[str] =Field(None,description='Optional overall current weather and forcast information of the destination')
 
-
+logger = logging.getLogger(__name__)
 class TravelPlanner:
     
     def __init__(self, config: ConfigProvider):
@@ -91,11 +92,12 @@ class TravelPlanner:
             ## Primary Tool: GoogleSerperAPIWrapper
             ## Secondary Tool: TavilySearchResults
             try:
+                logger.debug(f"Searching for top restaurants in {city}")
                 results = self.search_tool.run(query)
                 if results:
                     return f'Top restaurant in {city} : {results}'
             except Exception as e:
-                print(f'Error in Search (restaurant): {str(e)}')
+                logger.error(f'Error in Search (restaurant): {str(e)}')
                 
             return f'Top restaurant in {city} not found'
                 
@@ -111,11 +113,12 @@ class TravelPlanner:
             ## Primary Tool: GoogleSerperAPIWrapper
             ## Secondary Tool: TavilySearchResults
             try:
+                logger.debug(f"Searching for top activities in {city}")
                 results = self.search_tool.run(query)
                 if results:
                     return f'Top activities in {city} : {results}'
             except Exception as e:
-                print(f'Error in Search (activity): {str(e)}')
+                logger.error(f'Error in Search (activity): {str(e)}')
                 
             return f'Top activities in {city} not found'
         
@@ -130,12 +133,13 @@ class TravelPlanner:
             query = f'Means of transport in {city}'
             ## Primary Tool: GoogleSerperAPIWrapper
             ## Secondary Tool: DuckDuckGoSearchRun
+            logger.debug(f"Searching for means of transport in {city}")
             try:
                 results = self.search_tool.run(query)
                 if results:
                     return f'Means of transport in {city} : {results}'
             except Exception as e:
-                print(f'Error in Serper Search (transport): {str(e)}')
+                logger.error(f'Error in Serper Search (transport): {str(e)}')
             
             return f'Means of transport in {city} not found'
         
@@ -148,6 +152,7 @@ class TravelPlanner:
                 str: Current weather for the city.
             '''
             try:
+                logger.debug(f"Getting current weather for {city}")
                 current_weather = self.weather_service.get_weather(city)
                 if current_weather and 'main' in current_weather and 'weather' in current_weather:                                 
                     current_description=current_weather['weather'][0]['description']
@@ -155,7 +160,7 @@ class TravelPlanner:
                     return f'Current weather in {city} : {current_temp}°C, {current_description}'
                 return f'Current weather in {city} not found'
             except Exception as e:
-                print(f'Error getting current weather: {str(e)}')
+                logger.error(f'Error getting current weather: {str(e)}')
                 return f'Current weather in {city} not found due to error'
                 
                 
@@ -169,12 +174,13 @@ class TravelPlanner:
                 Dict[str, Any]: Raw Json weather forecast data.
             '''
             try:
+                logger.debug(f"Getting weather forecast for {city} for {days} days")
                 weather_forecast = self.weather_service.get_forecast(city, days)  
                 if weather_forecast and 'list' in weather_forecast:
                       return weather_forecast
                 return {"error": f'Weather forecast for {city} not found'}
             except Exception as e:
-                print(f'Error getting weather forecast: {str(e)}')
+                logger.error(f'Error getting weather forecast: {str(e)}')
                 return f'Weather forecast for {city} not found due to error'
         
         @tool
@@ -194,11 +200,12 @@ class TravelPlanner:
             ## Primary Tool: GoogleSerperAPIWrapper
             ## Secondary Tool: DuckDuckGoSearchRun
             try:
+                logger.info(f"Searching for hotels in {city} from {check_in_date} to {check_out_date}")
                 results = self.search_tool.run(query)
                 if results:
                     return f'Hotels in {city} : {results}'
             except Exception as e:
-                print(f"Error in Serper Search: {str(e)}")
+                logger.error(f"Error in Serper Search: {str(e)}")
             
             return f'Hotels in {city} not found'
         
@@ -214,12 +221,12 @@ class TravelPlanner:
             return self.calculator.multiply(price_per_night, days)
         
         @tool
-        def add_costs(*costs: float) -> float:
+        def add_costs(costs: List[float]) -> float:
             '''
             Add multiple costs together
             
             Args:
-                *costs (float): List of costs to be sumed up
+                costs (List[float]): Costs to add.
                 
             Returns:
                 float: Total cost
@@ -227,12 +234,12 @@ class TravelPlanner:
             return self.calculator.add(*costs)
         
         @tool
-        def multiply_costs(*costs: float) -> float:
+        def multiply_costs(costs: List[float]) -> float:
             '''
             Multiply multiple costs together
             
             Args:
-                *costs (float): List of costs to be multiplies together
+                costs (List[float]): Costs to multiply.
                 
             Returns:
                 float: Total cost

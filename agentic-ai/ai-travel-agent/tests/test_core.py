@@ -1,11 +1,13 @@
+import logging as stdlib_logging
 import unittest
 from unittest.mock import Mock, patch
 
 from langchain_core.messages import AIMessage
 
-from app.agent import Agent
+from app.agent import Agent, LLM_ERROR_RESPONSE
+from app.common.utils import logging
 from app.guard.policy import DomainClassification, TRAVEL_REFUSAL
-from app.planner import DayPlanInput
+from app.planner import DayPlanInput, TravelPlanner
 from app.prompt.prompt_loader import load_prompts
 from app.tools.currency import CurrencyTool
 from app.tools.search import GoogleSerperAPIWrapperTool, SearchTool
@@ -26,11 +28,13 @@ class FakePlanner:
     class DomainLLM:
         def __init__(self, classification):
             self.classification = classification
+            self.invocations = []
 
         def with_structured_output(self, schema):
             return self
 
         def invoke(self, messages):
+            self.invocations.append(messages)
             return self.classification
 
     def __init__(self, decision="in_scope", confidence=1.0):
@@ -44,6 +48,43 @@ class FakePlanner:
 
 
 class CoreTests(unittest.TestCase):
+    def test_logging_decorator_defaults_to_info(self):
+        class Service:
+            @logging
+            def run(self):
+                return "done"
+
+        with self.assertLogs(Service.run.__module__, level="INFO") as logs:
+            result = Service().run()
+
+        self.assertEqual(result, "done")
+        self.assertIn("Entering", logs.output[0])
+        self.assertIn("Completed", logs.output[1])
+        self.assertTrue(all(entry.startswith("INFO:") for entry in logs.output))
+
+    def test_logging_decorator_allows_level_override(self):
+        class Service:
+            @logging(level=stdlib_logging.DEBUG)
+            def run(self):
+                return "done"
+
+        with self.assertLogs(Service.run.__module__, level="DEBUG") as logs:
+            Service().run()
+
+        self.assertTrue(all(entry.startswith("DEBUG:") for entry in logs.output))
+
+    def test_debug_logging_decorator_logs_and_reraises_errors(self):
+        class Service:
+            @logging
+            def run(self):
+                raise ValueError("failure")
+
+        with self.assertLogs(Service.run.__module__, level="DEBUG") as logs:
+            with self.assertRaisesRegex(ValueError, "failure"):
+                Service().run()
+
+        self.assertIn("Failed", logs.output[1])
+
     def test_agent_checkpoints_are_not_shared(self):
         first = Agent(FakePlanner())
         second = Agent(FakePlanner())
@@ -58,6 +99,20 @@ class CoreTests(unittest.TestCase):
 
         self.assertEqual(result, "ok")
         self.assertEqual(planner.llm_with_tools.invocations, 1)
+
+    def test_agent_chat_handles_llm_invocation_error(self):
+        planner = FakePlanner(decision="in_scope", confidence=0.95)
+        planner.llm_with_tools.invoke = Mock(side_effect=RuntimeError("provider unavailable"))
+        agent = Agent(planner)
+
+        with self.assertLogs("app.agent", level="ERROR") as logs:
+            result = agent.chat("Plan a weekend in Paris", "error-thread")
+
+        self.assertEqual(result, LLM_ERROR_RESPONSE)
+        self.assertIn("Travel agent LLM invocation failed", logs.output[0])
+        self.assertIn("llm_type=TravelLLM", logs.output[0])
+        self.assertIn("conversation_message_count=1", logs.output[0])
+        self.assertNotIn("provider unavailable", result)
 
     def test_agent_chat_rejects_out_of_scope_request(self):
         planner = FakePlanner(decision="out_of_scope", confidence=0.99)
@@ -76,6 +131,41 @@ class CoreTests(unittest.TestCase):
 
         self.assertEqual(result, TRAVEL_REFUSAL)
         self.assertEqual(planner.llm_with_tools.invocations, 0)
+
+    def test_agent_chat_passes_recent_thread_context_to_guard(self):
+        planner = FakePlanner()
+        agent = Agent(planner)
+
+        agent.chat("Plan three days in Rome", "rome-thread")
+        agent.chat("Can you make day two cheaper?", "rome-thread")
+
+        classifier_message = planner.llm.invocations[1][-1].content
+        self.assertIn("Plan three days in Rome", classifier_message)
+        self.assertIn("Can you make day two cheaper?", classifier_message)
+
+    def test_agent_chat_fails_closed_when_guard_errors(self):
+        planner = FakePlanner()
+        planner.llm.with_structured_output = Mock(side_effect=RuntimeError("guard unavailable"))
+        agent = Agent(planner)
+
+        with self.assertLogs("app.guard.policy", level="ERROR"):
+            result = agent.chat("Write a Python program", "error-thread")
+
+        self.assertEqual(result, TRAVEL_REFUSAL)
+        self.assertEqual(planner.llm_with_tools.invocations, 0)
+
+    def test_calculator_tools_accept_list_arguments(self):
+        planner = TravelPlanner.__new__(TravelPlanner)
+        planner.search_tool = Mock()
+        planner.weather_service = Mock()
+        planner.currency_converter = Mock()
+        planner.calculator = Mock()
+        planner.calculator.add.side_effect = lambda *values: sum(values)
+        planner.calculator.multiply.side_effect = lambda *values: values[0] * values[1]
+        tools = {tool.name: tool for tool in planner._travel_planning_tools()}
+
+        self.assertEqual(tools["add_costs"].invoke({"costs": [2, 3]}), 5)
+        self.assertEqual(tools["multiply_costs"].invoke({"costs": [2, 3]}), 6)
 
     def test_search_result_normalization(self):
         self.assertEqual(SearchTool._format_results("plain result"), "plain result")

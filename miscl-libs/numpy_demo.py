@@ -214,9 +214,24 @@ if __name__ == "__main__":
     print("column vector:", np.array([1, 2, 3]).reshape(-1, 1))
     print("column vector with multiple dimesnions:", np.array([1, 2, 3]).reshape(1, -1))
     print('Row vector afer: ', row_vector)
+    print("row vector shape:", row_vector[:, np.newaxis])
+    print("row vector shape:", row_vector[:, None])
+    matrix = np.array([[1, 2, 3], 
+                   [4, 5, 6]])
+    column_vector = np.array([1, 2, 3]).reshape(-1, 1)
+    print("matrix shape: \n", matrix)
+    print("column vector shape: \n", column_vector)
+    print("Matrix * Column Vector:\n", np.matmul(matrix, column_vector))
+    print("row_vector * row_vector:\n", np.matmul(row_vector, row_vector))
+    print("multi:\n", np.matmul(matrix, row_vector))
+    print("dot:\n", np.dot(matrix, row_vector))
     
-    
-    
+    matrix = np.array([
+        [1, 2, 3], 
+        [4, 5, 6]
+    ])
+    print("Transposed matrix:\n", matrix.transpose())
+    print("Transposed matrix:\n", np.dot(matrix, matrix.transpose()))
     
 
     
