@@ -46,16 +46,10 @@ Available prompts:
     ).chat.completions.create(
         model=settings.openai_model,
         messages=[
-            {
-                "role": "system",
-                "content": router_prompt
-            },
-            {
-                "role": "user",
-                "content": user_request
-            }
+            {"role": "system", "content": router_prompt},
+            {"role": "user", "content": user_request},
         ],
-        response_format={"type": "json_object"}
+        response_format={"type": "json_object"},
     )
 
     return json.loads(response.choices[0].message.content)

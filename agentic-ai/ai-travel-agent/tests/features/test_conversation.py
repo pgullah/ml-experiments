@@ -1,7 +1,7 @@
 import logging
 from unittest.mock import Mock
 
-from app.agent import Agent, LLM_ERROR_RESPONSE
+from app.agent import LLM_ERROR_RESPONSE, Agent
 from tests.support.fakes import FakePlanner
 
 
@@ -29,8 +29,7 @@ class TestConversation:
         agent.chat("Make day two cheaper", "rome-thread")
 
         follow_up_context = [
-            message.content
-            for message in planner.llm_with_tools.received_messages[1]
+            message.content for message in planner.llm_with_tools.received_messages[1]
         ]
         assert "Plan three days in Rome" in follow_up_context
         assert "Make day two cheaper" in follow_up_context
@@ -43,8 +42,7 @@ class TestConversation:
         agent.chat("Plan a weekend in Paris", "paris-thread")
 
         paris_context = [
-            message.content
-            for message in planner.llm_with_tools.received_messages[1]
+            message.content for message in planner.llm_with_tools.received_messages[1]
         ]
         assert "Plan three days in Rome" not in paris_context
         assert "Plan a weekend in Paris" in paris_context

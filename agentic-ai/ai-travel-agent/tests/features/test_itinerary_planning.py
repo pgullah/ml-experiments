@@ -1,7 +1,7 @@
 from unittest.mock import Mock
 
-from app.schemas.itinerary import DayPlanInput
 from app.planner import TravelPlanner
+from app.schemas.itinerary import DayPlanInput
 
 
 class TestItineraryPlanning:

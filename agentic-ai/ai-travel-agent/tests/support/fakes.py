@@ -3,7 +3,6 @@ from langchain_core.messages import AIMessage
 from app.common.config import AppSettings
 from app.guard_rails.policy import DomainClassification
 
-
 TEST_SETTINGS = AppSettings(
     _env_file=None,
     openrouter_api_key="test-openrouter-key",
@@ -12,8 +11,6 @@ TEST_SETTINGS = AppSettings(
 
 
 class FakePlanner:
-    tools = []
-
     class TravelLLM:
         def __init__(self):
             self.invocations = 0
@@ -45,3 +42,4 @@ class FakePlanner:
         )
         self.llm = self.DomainLLM(classification)
         self.llm_with_tools = self.TravelLLM()
+        self.tools = []

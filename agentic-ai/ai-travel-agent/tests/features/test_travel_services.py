@@ -1,13 +1,13 @@
 from unittest.mock import Mock
 
-from app.tools.currency import CurrencyService
-from app.tools.search import (
+from app.service.currency import CurrencyService
+from app.service.search import (
     SearchProvider,
     SearchService,
     SerperSearchClient,
     TavilySearchClient,
 )
-from app.tools.weather import WeatherTool
+from app.service.weather import WeatherTool
 from tests.support.fakes import TEST_SETTINGS
 
 
@@ -31,7 +31,7 @@ class TestTravelServices:
 
     def test_serper_client_uses_http_api_contract(self, monkeypatch):
         post = Mock()
-        monkeypatch.setattr("app.tools.search.requests.post", post)
+        monkeypatch.setattr("app.service.search.requests.post", post)
         response = Mock()
         response.json.return_value = {
             "organic": [{"link": "https://example.com", "snippet": "Result"}]
@@ -45,9 +45,7 @@ class TestTravelServices:
 
         result = client.search("hotels in London")
 
-        assert result == [
-            {"link": "https://example.com", "snippet": "Result"}
-        ]
+        assert result == [{"link": "https://example.com", "snippet": "Result"}]
         post.assert_called_once_with(
             "https://google.serper.dev/search",
             headers={
@@ -72,7 +70,7 @@ class TestTravelServices:
 
     def test_tavily_client_uses_http_api_contract(self, monkeypatch):
         post = Mock()
-        monkeypatch.setattr("app.tools.search.requests.post", post)
+        monkeypatch.setattr("app.service.search.requests.post", post)
         response = Mock()
         response.json.return_value = {
             "results": [{"url": "https://example.com", "content": "Result"}]
@@ -87,9 +85,7 @@ class TestTravelServices:
 
         result = client.search("hotels in London")
 
-        assert result == [
-            {"url": "https://example.com", "content": "Result"}
-        ]
+        assert result == [{"url": "https://example.com", "content": "Result"}]
         post.assert_called_once_with(
             "https://api.tavily.com/search",
             headers={"Authorization": "Bearer test-key"},
@@ -131,7 +127,7 @@ class TestTravelServices:
 
     def test_currency_conversion_normalizes_codes_and_obeys_timeout(self, monkeypatch):
         get = Mock()
-        monkeypatch.setattr("app.tools.currency.requests.get", get)
+        monkeypatch.setattr("app.service.currency.requests.get", get)
         response = Mock()
         response.json.return_value = {"rates": {"JPY": 200.0}}
         get.return_value = response
@@ -144,7 +140,7 @@ class TestTravelServices:
 
     def test_weather_forecast_is_limited_to_supported_window(self, monkeypatch):
         get = Mock()
-        monkeypatch.setattr("app.tools.weather.requests.get", get)
+        monkeypatch.setattr("app.service.weather.requests.get", get)
         response = Mock()
         response.json.return_value = {"list": []}
         get.return_value = response

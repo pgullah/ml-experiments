@@ -6,7 +6,6 @@ from app.agent import Agent
 from app.common.config import AppSettings
 from app.planner import TravelPlanner
 
-
 st.set_page_config(
     page_title="AI Travel Agent",
     page_icon="✈️",

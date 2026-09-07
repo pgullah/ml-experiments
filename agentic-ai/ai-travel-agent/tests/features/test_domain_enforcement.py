@@ -3,7 +3,7 @@ from unittest.mock import Mock
 
 from app.agent import Agent
 from app.guard_rails.policy import TRAVEL_REFUSAL, travel_domain_guard
-from tests.support.fakes import FakePlanner, TEST_SETTINGS
+from tests.support.fakes import TEST_SETTINGS, FakePlanner
 
 
 class TestTravelDomainEnforcement:

@@ -3,7 +3,6 @@ from pathlib import Path
 from pydantic import AnyHttpUrl, Field, PositiveInt, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 ENV_FILES = (
     PROJECT_ROOT.parent / ".env",
@@ -44,7 +43,5 @@ class AppSettings(BaseSettings):
     max_request_characters: PositiveInt = 4_000
     domain_confidence_threshold: float = Field(default=0.8, ge=0, le=1)
 
-    currency_api_url: AnyHttpUrl = AnyHttpUrl(
-        "https://api.frankfurter.dev/v1/latest"
-    )
+    currency_api_url: AnyHttpUrl = AnyHttpUrl("https://api.frankfurter.dev/v1/latest")
     request_timeout_seconds: float = Field(default=10.0, gt=0, le=120)

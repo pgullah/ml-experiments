@@ -1,12 +1,16 @@
-from dataclasses import dataclass, field
 import logging
-from typing import Any, Protocol, Sequence
-from ddgs import DDGS
+from collections.abc import Sequence
+from dataclasses import dataclass, field
+from typing import Any, Protocol
+
 import requests
+from ddgs import DDGS
+
 from app.common.config import AppSettings
 from app.common.errors import ServiceError
 
 logger = logging.getLogger(__name__)
+
 
 # ducktyping interface for search clients
 class SearchClient(Protocol):
@@ -77,7 +81,9 @@ class SearchService:
             if providers is not None
             else self._build_providers(settings)
         )
-        self._search_providers = sorted(configured_providers, key=lambda provider: provider.priority)
+        self._search_providers = sorted(
+            configured_providers, key=lambda provider: provider.priority
+        )
 
     @staticmethod
     def _build_providers(settings: AppSettings) -> list[SearchProvider]:
@@ -148,11 +154,7 @@ class SearchService:
             formatted = []
             for result in results:
                 if isinstance(result, dict):
-                    url = (
-                        result.get("url")
-                        or result.get("link")
-                        or result.get("href")
-                    )
+                    url = result.get("url") or result.get("link") or result.get("href")
                     content = (
                         result.get("content")
                         or result.get("snippet")
