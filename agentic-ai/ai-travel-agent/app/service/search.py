@@ -139,6 +139,7 @@ class SearchService:
 
     @staticmethod
     def _format_results(results: Any) -> str:
+        # TODO: Is it worth using llm to format the results the way we wanted ??
         if isinstance(results, str):
             return results
         if isinstance(results, dict):

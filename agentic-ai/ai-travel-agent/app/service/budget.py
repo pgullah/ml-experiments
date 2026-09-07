@@ -1,4 +1,4 @@
-class BudgetingTool:
+class BudgetingService:
     
     def add(self,*costs: float) -> float:
         '''

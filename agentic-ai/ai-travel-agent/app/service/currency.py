@@ -7,7 +7,7 @@ from app.common.config import AppSettings
 
 logger = logging.getLogger(__name__)
 
-class CurrencyTool:
+class CurrencyService:
     
     def __init__(self, settings: AppSettings):
         self.base_url = str(settings.currency_api_url)

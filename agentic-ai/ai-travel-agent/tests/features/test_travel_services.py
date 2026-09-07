@@ -1,6 +1,6 @@
 from unittest.mock import Mock
 
-from app.tools.currency import CurrencyTool
+from app.tools.currency import CurrencyService
 from app.tools.search import (
     SearchProvider,
     SearchService,
@@ -136,7 +136,7 @@ class TestTravelServices:
         response.json.return_value = {"rates": {"JPY": 200.0}}
         get.return_value = response
 
-        result = CurrencyTool(TEST_SETTINGS).convert_currency(1, "gbp", "jpy")
+        result = CurrencyService(TEST_SETTINGS).convert_currency(1, "gbp", "jpy")
 
         assert result == 200.0
         assert get.call_args.kwargs["timeout"] == 10

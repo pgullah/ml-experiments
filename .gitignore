@@ -6,3 +6,4 @@ __py__cache__
 .env
 **/.venv/
 **/.venv
+**/.coverage
