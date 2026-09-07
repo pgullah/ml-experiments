@@ -82,7 +82,7 @@ class Agent:
         builder.add_edge('tools','LLM_Decision_Step')
         return builder.compile(checkpointer=self.checkpointer)
     
-    @travel_domain_guard(confidence_threshold=0.8)
+    @travel_domain_guard()
     def chat(self, query: str, thread_id: str):
         config = {
             "configurable": {

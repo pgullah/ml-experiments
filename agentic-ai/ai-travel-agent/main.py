@@ -1,7 +1,9 @@
 
 
 from datetime import datetime
+from email.mime import message
 import logging
+from urllib import response
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -26,9 +28,11 @@ def chat(thread_id: str | None = None):
         if user_query.lower() in ['exit', 'quit']:
             logger.info("Exiting chat.")
             break
-        response = agent_instance.chat(user_query, thread_id)
-        print("Agent says:")
-        print(response)
+        loading_msg = "Agent is thinking..."
+        print(loading_msg, end="", flush=True)
+        response = agent_instance.chat(user_query, thread_id)   
+        print("\r" + " " * len(loading_msg) + "\r", end="", flush=True)
+        print(f"Agent: {response}")
         
 
 if __name__ == "__main__":

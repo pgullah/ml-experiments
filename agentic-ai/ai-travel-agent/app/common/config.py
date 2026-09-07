@@ -42,6 +42,7 @@ class AppSettings(BaseSettings):
     max_context_messages: PositiveInt = 5
     max_context_characters: PositiveInt = 4_000
     max_request_characters: PositiveInt = 4_000
+    domain_confidence_threshold: float = Field(default=0.8, ge=0, le=1)
 
     currency_api_url: AnyHttpUrl = AnyHttpUrl(
         "https://api.frankfurter.dev/v1/latest"

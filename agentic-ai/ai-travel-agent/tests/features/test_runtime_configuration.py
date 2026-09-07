@@ -24,6 +24,7 @@ class TestRuntimeConfiguration:
             "OPENWEATHERMAP_API_KEY": "weather-secret",
             "MAX_CONTEXT_MESSAGES": "7",
             "REQUEST_TIMEOUT_SECONDS": "2.5",
+            "DOMAIN_CONFIDENCE_THRESHOLD": "0.9",
         }
 
         for name, value in environment.items():
@@ -32,6 +33,7 @@ class TestRuntimeConfiguration:
 
         assert settings.max_context_messages == 7
         assert settings.request_timeout_seconds == 2.5
+        assert settings.domain_confidence_threshold == 0.9
         assert "router-secret" not in repr(settings)
 
     def test_invalid_operational_limits_are_rejected(self):
