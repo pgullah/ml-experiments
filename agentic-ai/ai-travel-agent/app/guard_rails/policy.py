@@ -95,7 +95,7 @@ def _classify(
 
 @validate_call
 def travel_domain_guard(
-    confidence_threshold: ConfidenceThreshold = 0.8,
+    confidence_threshold: ConfidenceThreshold | None = None,
 ) -> Callable:
     """
     Guard a method using the configured threshold or a method-specific override.
@@ -107,6 +107,13 @@ def travel_domain_guard(
             if not hasattr(self, "llm"):
                 raise AttributeError("The class must have 'llm' attribute.")
             settings: AppSettings = self.settings
+            query = query.strip()
+            if not query:
+                raise ValueError("query must not be empty")
+            if len(query) > settings.max_request_characters:
+                raise ValueError(
+                    f"query must not exceed {settings.max_request_characters} characters"
+                )
             threshold = (
                 confidence_threshold
                 if confidence_threshold is not None
@@ -117,6 +124,11 @@ def travel_domain_guard(
             if context_by_thread is None:
                 context_by_thread = {}
                 self._domain_context_by_thread = context_by_thread
+            if (
+                thread_id not in context_by_thread
+                and len(context_by_thread) >= settings.max_guard_threads
+            ):
+                context_by_thread.pop(next(iter(context_by_thread)))
 
             try:
                 classification = _classify(
@@ -135,7 +147,12 @@ def travel_domain_guard(
                 return TRAVEL_REFUSAL
 
             result = method(self, query, *args, **kwargs)
-            context_by_thread.setdefault(thread_id, []).append(query)
+            context_by_thread.setdefault(thread_id, []).extend(
+                [
+                    f"user: {query[: settings.max_request_characters]}",
+                    f"assistant: {str(result)[: settings.max_context_characters]}",
+                ]
+            )
             context_by_thread[thread_id] = context_by_thread[thread_id][
                 -settings.max_context_messages :
             ]

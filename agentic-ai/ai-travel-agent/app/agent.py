@@ -1,8 +1,17 @@
 import logging
 
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import (
+    AIMessage,
+    HumanMessage,
+    RemoveMessage,
+    SystemMessage,
+    trim_messages,
+)
+from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.errors import GraphRecursionError
 from langgraph.graph import END, START, MessagesState, StateGraph
+from langgraph.graph.message import REMOVE_ALL_MESSAGES
 from langgraph.prebuilt import ToolNode
 
 from app.common.config import AppSettings
@@ -13,6 +22,11 @@ from app.prompt.prompt_loader import load_raw_prompt
 logger = logging.getLogger(__name__)
 LLM_ERROR_RESPONSE = (
     "I'm sorry, but I couldn't process your request right now. Please try again."
+)
+AGENT_ERROR_RESPONSE = "I'm sorry, but the travel service encountered an unexpected error. Please try again."
+TOOL_LOOP_RESPONSE = (
+    "I'm sorry, but I couldn't complete the plan within the allowed processing steps. "
+    "Please make the request more specific and try again."
 )
 
 
@@ -44,7 +58,13 @@ class Agent:
             Returns:
                 dict: A dictionary containing the updated messages state.
             """
-            user_question = state["messages"]
+            user_question = trim_messages(
+                state["messages"],
+                max_tokens=self.settings.max_conversation_messages,
+                token_counter=len,
+                strategy="last",
+                start_on="human",
+            )
             input_question = [self._system_prompt] + user_question
             try:
                 response = self.llm_with_tools.invoke(input_question)
@@ -57,7 +77,14 @@ class Agent:
                 )
                 response = AIMessage(content=LLM_ERROR_RESPONSE)
 
-            return {"messages": [response]}
+            # Replace the checkpoint history as well as bounding the model input.
+            return {
+                "messages": [
+                    RemoveMessage(id=REMOVE_ALL_MESSAGES),
+                    *user_question,
+                    response,
+                ]
+            }
 
         def route_tool(state: MessagesState):
             last_message = state["messages"][-1]
@@ -78,11 +105,24 @@ class Agent:
 
     @travel_domain_guard()
     def chat(self, query: str, thread_id: str):
-        config = {"configurable": {"thread_id": thread_id}}
+        if not thread_id or not thread_id.strip():
+            raise ValueError("thread_id must not be empty")
+
+        config: RunnableConfig = {
+            "configurable": {"thread_id": thread_id},
+            "recursion_limit": self.settings.graph_recursion_limit,
+        }
         # Invoke the agent graph with the initial query and the memory saver
-        response_state = self._agent_graph.invoke(
-            {"messages": [HumanMessage(content=query)]},
-            config=config,
-        )
+        try:
+            response_state = self._agent_graph.invoke(
+                {"messages": [HumanMessage(content=query)]},
+                config=config,
+            )
+        except GraphRecursionError:
+            logger.warning("Travel agent reached its graph recursion limit")
+            return TOOL_LOOP_RESPONSE
+        except Exception:
+            logger.exception("Travel agent graph execution failed")
+            return AGENT_ERROR_RESPONSE
         # The final output is the content of the last message in the state
         return response_state["messages"][-1].content

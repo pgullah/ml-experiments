@@ -7,3 +7,8 @@ __py__cache__
 **/.venv/
 **/.venv
 **/.coverage
+**/.gradle
+**/.idea
+**/.mypy_cache
+
+**/.codex

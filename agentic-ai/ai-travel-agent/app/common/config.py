@@ -33,6 +33,7 @@ class AppSettings(BaseSettings):
     tavily_api_key: SecretStr | None = None
     tavily_api_url: AnyHttpUrl = AnyHttpUrl("https://api.tavily.com/search")
     search_max_results: int = Field(default=5, ge=1, le=20)
+    search_max_output_characters: PositiveInt = 12_000
 
     prompt_dir: Path | None = None
     openai_api_key: SecretStr | None = None
@@ -40,7 +41,10 @@ class AppSettings(BaseSettings):
 
     max_context_messages: PositiveInt = 5
     max_context_characters: PositiveInt = 4_000
+    max_guard_threads: PositiveInt = 1_000
     max_request_characters: PositiveInt = 4_000
+    max_conversation_messages: PositiveInt = 40
+    graph_recursion_limit: PositiveInt = 25
     domain_confidence_threshold: float = Field(default=0.8, ge=0, le=1)
 
     currency_api_url: AnyHttpUrl = AnyHttpUrl("https://api.frankfurter.dev/v1/latest")

@@ -1,7 +1,10 @@
+from unittest.mock import Mock
+
 import pytest
 from pydantic import ValidationError
 
 from app.common.config import AppSettings
+from app.common.llm_loader import load_llm
 from app.prompt.prompt_loader import load_prompts
 
 
@@ -50,3 +53,20 @@ class TestRuntimeConfiguration:
 
         assert prompts
         assert all(prompt["prompt"] for prompt in prompts)
+
+    def test_llm_loader_passes_secret_without_logging_it(self, monkeypatch, caplog):
+        llm = object()
+        constructor = Mock(return_value=llm)
+        monkeypatch.setattr("app.common.llm_loader.ChatOpenRouter", constructor)
+        settings = AppSettings(
+            _env_file=None,
+            openrouter_api_key="router-secret",
+            openweathermap_api_key="weather-secret",
+        )
+
+        assert load_llm(settings) is llm
+        constructor.assert_called_once_with(
+            model="openrouter/free",
+            api_key=settings.openrouter_api_key,
+        )
+        assert "router-secret" not in caplog.text

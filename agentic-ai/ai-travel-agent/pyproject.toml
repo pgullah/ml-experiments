@@ -1,7 +1,7 @@
 [project]
 name = "ai-travel-agent"
 version = "0.1.0"
-description = "Add your description here"
+description = "Conversational travel planner built with LangGraph and live data tools"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -18,6 +18,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "pyright>=1.1.405",
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
     "ruff>=0.16.6",
@@ -29,3 +30,12 @@ ui = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+
+[project.scripts]
+travel-agent = "main:chat"
+
+[tool.pyright]
+include = ["app", "main.py", "streamlit_app.py"]
+pythonVersion = "3.12"
+venvPath = ".."
+venv = ".venv"

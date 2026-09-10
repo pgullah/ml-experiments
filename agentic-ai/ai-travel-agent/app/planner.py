@@ -1,15 +1,17 @@
 import logging
+from datetime import date as Date
 from typing import Any
 
 from langchain_core.tools import BaseTool, tool
 
 from app.common.config import AppSettings
+from app.common.errors import ClientError, ServiceError
 from app.common.llm_loader import load_llm
 from app.schemas.itinerary import DayPlanInput, DayPlanItem, FullItineraryInput
 from app.service.budget import BudgetingService
 from app.service.currency import CurrencyService
 from app.service.search import SearchService
-from app.service.weather import WeatherTool
+from app.service.weather import WeatherService
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +21,7 @@ class TravelPlanner:
 
     def __init__(self, settings: AppSettings):
         self.settings = settings
-        self.weather_service = WeatherTool(settings)
+        self.weather_service = WeatherService(settings)
         self.currency_converter = CurrencyService(settings)
         self.calculator = BudgetingService()
         self.search_service = SearchService(settings)
@@ -34,17 +36,18 @@ class TravelPlanner:
             try:
                 results = self.search_service.run(query)
                 return f"{success_prefix}: {results}" if results else failure_message
-            except Exception:
-                logger.exception("Travel search failed (query=%s)", query)
+            except ServiceError:
+                logger.warning("Travel search failed")
                 return failure_message
 
         @tool
         def search_attraction(city: str) -> str:
             """Search for top tourist attractions in a city."""
-            results = self.search_service.run(f"Top tourist attractions in {city}")
-            if results:
-                return f"Top attraction in {city} : {results}"
-            return f"Top attraction in {city} not found"
+            return search(
+                f"Top tourist attractions in {city}",
+                f"Top attractions in {city}",
+                f"Top attractions in {city} not found",
+            )
 
         @tool
         def search_restaurant(city: str) -> str:
@@ -87,21 +90,21 @@ class TravelPlanner:
                     temperature = current_weather["main"]["temp"]
                     return f"Current weather in {city} : {temperature}°C, {description}"
                 return f"Current weather in {city} not found"
-            except Exception:
-                logger.exception("Current weather lookup failed (city=%s)", city)
+            except ServiceError:
+                logger.warning("Current weather lookup failed (city=%s)", city)
                 return f"Current weather in {city} not found due to error"
 
         @tool
-        def get_weather_forcast(city: str, days: int = 5) -> dict[str, Any] | str:
+        def get_weather_forecast(city: str, days: int = 5) -> dict[str, Any]:
             """Get up to five days of weather forecast data for a city."""
             try:
                 forecast = self.weather_service.get_forecast(city, days)
                 if forecast and "list" in forecast:
                     return forecast
                 return {"error": f"Weather forecast for {city} not found"}
-            except Exception:
-                logger.exception("Weather forecast lookup failed (city=%s)", city)
-                return f"Weather forecast for {city} not found due to error"
+            except ServiceError:
+                logger.warning("Weather forecast lookup failed (city=%s)", city)
+                return {"error": f"Weather forecast for {city} is unavailable"}
 
         @tool
         def search_hotels(
@@ -141,17 +144,25 @@ class TravelPlanner:
             amount: float,
             from_currency: str,
             to_currency: str,
-        ) -> float | None:
+        ) -> float | str:
             """Convert an amount between currencies."""
-            return self.currency_converter.convert_currency(
-                amount,
-                from_currency,
-                to_currency,
-            )
+            try:
+                return self.currency_converter.convert_currency(
+                    amount,
+                    from_currency,
+                    to_currency,
+                )
+            except (ClientError, ServiceError):
+                logger.warning(
+                    "Currency tool failed (from=%s, to=%s)",
+                    from_currency,
+                    to_currency,
+                )
+                return "Currency conversion is currently unavailable"
 
         @tool(args_schema=DayPlanInput)
         def get_day_plan(
-            date: str,
+            date: Date,
             day_number: int,
             plan_items: list[DayPlanItem],
             summary: str | None = None,
@@ -182,8 +193,8 @@ class TravelPlanner:
         @tool(args_schema=FullItineraryInput)
         def create_full_itinerary(
             destination: str,
-            start_date: str,
-            end_date: str,
+            start_date: Date,
+            end_date: Date,
             total_days: int,
             daily_plans: list[str],
             overall_summary: str | None = None,
@@ -221,7 +232,7 @@ class TravelPlanner:
             search_activity,
             search_transport,
             get_current_weather,
-            get_weather_forcast,
+            get_weather_forecast,
             search_hotels,
             hotel_cost,
             add_costs,

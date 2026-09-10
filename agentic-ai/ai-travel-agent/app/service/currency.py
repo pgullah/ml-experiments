@@ -3,6 +3,7 @@ import logging
 import requests
 
 from app.common.config import AppSettings
+from app.common.errors import ClientError, ServiceError
 
 logger = logging.getLogger(__name__)
 
@@ -14,24 +15,42 @@ class CurrencyService:
 
     def convert_currency(
         self, amount: float, from_currency: str, to_currency: str
-    ) -> float | None:
+    ) -> float:
         """Convert currency from one to another."""
+        if amount < 0:
+            raise ClientError("Currency amount must not be negative")
+        source = from_currency.strip().upper()
+        target = to_currency.strip().upper()
+        if len(source) != 3 or len(target) != 3:
+            raise ClientError("Currency codes must be three-letter ISO codes")
+
         try:
-            logger.info(f"Converting {amount} from {from_currency} to {to_currency}")
+            logger.info("Converting currency (from=%s, to=%s)", source, target)
             response = requests.get(
                 self.base_url,
                 params={
                     "amount": amount,
-                    "from": from_currency.upper(),
-                    "to": to_currency.upper(),
+                    "from": source,
+                    "to": target,
                 },
                 timeout=self.request_timeout,
             )
             response.raise_for_status()
             result = response.json()
-            return result["rates"][to_currency.upper()]
-        except requests.HTTPError:
-            logger.exception(
-                f"Failed to convert currency from {from_currency} to {to_currency}"
+            return float(result["rates"][target])
+        except (requests.RequestException, ValueError, KeyError, TypeError) as error:
+            status = (
+                error.response.status_code
+                if isinstance(error, requests.RequestException)
+                and error.response is not None
+                else None
             )
-            return None
+            logger.error(
+                "Currency conversion failed (from=%s, to=%s, status=%s)",
+                source,
+                target,
+                status,
+            )
+            raise ServiceError(
+                "Currency conversion is currently unavailable"
+            ) from error

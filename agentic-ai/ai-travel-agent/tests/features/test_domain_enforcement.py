@@ -7,6 +7,14 @@ from tests.support.fakes import TEST_SETTINGS, FakePlanner
 
 
 class TestTravelDomainEnforcement:
+    def test_application_threshold_is_used_when_method_has_no_override(self):
+        planner = FakePlanner(decision="in_scope", confidence=0.9)
+        planner.settings = TEST_SETTINGS.model_copy(
+            update={"domain_confidence_threshold": 0.95}
+        )
+
+        assert Agent(planner).chat("Plan a trip", "strict-thread") == TRAVEL_REFUSAL
+
     def test_method_threshold_overrides_application_default(self):
         planner = FakePlanner(decision="in_scope", confidence=0.9)
 
@@ -50,7 +58,21 @@ class TestTravelDomainEnforcement:
 
         classifier_message = planner.llm.invocations[1][-1].content
         assert "Plan three days in Rome" in classifier_message
+        assert "assistant: ok" in classifier_message
         assert "Can you make day two cheaper?" in classifier_message
+
+    def test_guard_context_is_bounded_per_thread_and_thread_count(self):
+        planner = FakePlanner()
+        planner.settings = TEST_SETTINGS.model_copy(
+            update={"max_context_messages": 2, "max_guard_threads": 1}
+        )
+        agent = Agent(planner)
+
+        agent.chat("Plan Rome", "rome")
+        agent.chat("Plan Paris", "paris")
+
+        assert list(agent._domain_context_by_thread) == ["paris"]
+        assert len(agent._domain_context_by_thread["paris"]) == 2
 
     def test_classifier_failure_fails_closed(self, caplog):
         planner = FakePlanner()

@@ -1,0 +1,32 @@
+name: AI travel agent quality
+
+on:
+  push:
+    paths:
+      - "agentic-ai/ai-travel-agent/**"
+      - "agentic-ai/uv.lock"
+      - ".github/workflows/ai-travel-agent.yml"
+  pull_request:
+    paths:
+      - "agentic-ai/ai-travel-agent/**"
+      - "agentic-ai/uv.lock"
+      - ".github/workflows/ai-travel-agent.yml"
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: agentic-ai/ai-travel-agent
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv python install 3.12
+      - run: uv sync --locked --group dev --group ui
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pyright
+      - run: uv run pytest --cov=app --cov-report=term-missing --cov-fail-under=85

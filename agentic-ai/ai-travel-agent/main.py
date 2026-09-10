@@ -12,7 +12,7 @@ from app.planner import TravelPlanner
 # @logging(level=logging.DEBUG)
 def chat(thread_id: str | None = None):
     thread_id = thread_id or f"thread-{uuid4()}"
-    settings = AppSettings()
+    settings = AppSettings()  # pyright: ignore[reportCallIssue]
 
     # Initialize Travel_Planner_Tools and Agent
     planner = TravelPlanner(settings)
@@ -27,7 +27,10 @@ def chat(thread_id: str | None = None):
             break
         loading_msg = "Agent is thinking..."
         print(loading_msg, end="", flush=True)
-        response = agent_instance.chat(user_query, thread_id)
+        try:
+            response = agent_instance.chat(user_query, thread_id)
+        except ValueError as error:
+            response = str(error)
         print("\r" + " " * len(loading_msg) + "\r", end="", flush=True)
         print(f"Agent: {response}")
 
