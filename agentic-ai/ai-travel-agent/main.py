@@ -28,7 +28,8 @@ def chat(thread_id: str | None = None):
         loading_msg = "Agent is thinking..."
         print(loading_msg, end="", flush=True)
         try:
-            response = agent_instance.chat(user_query, thread_id)
+            result = agent_instance.chat(user_query, thread_id)
+            response = result if isinstance(result, str) else result.content
         except ValueError as error:
             response = str(error)
         print("\r" + " " * len(loading_msg) + "\r", end="", flush=True)

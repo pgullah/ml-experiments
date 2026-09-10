@@ -19,7 +19,8 @@ class TestConversation:
 
         result = Agent(planner).chat("Plan a weekend in Paris", "travel-thread")
 
-        assert result == "ok"
+        assert result.content == "ok"
+        assert result.thread_id == "travel-thread"
         assert planner.llm_with_tools.invocations == 1
 
     def test_separate_agents_do_not_share_conversation_checkpoints(self):
@@ -27,7 +28,7 @@ class TestConversation:
         second = Agent(FakePlanner())
 
         assert first.checkpointer is not second.checkpointer
-        assert first.chat("Plan a trip", "thread-1") == "ok"
+        assert first.chat("Plan a trip", "thread-1").content == "ok"
 
     def test_follow_up_receives_previous_turns_from_the_same_thread(self):
         planner = FakePlanner()
@@ -67,11 +68,11 @@ class TestConversation:
                 "error-thread",
             )
 
-        assert result == LLM_ERROR_RESPONSE
+        assert result.content == LLM_ERROR_RESPONSE
         assert "Travel agent LLM invocation failed" in caplog.text
         assert "llm_type=TravelLLM" in caplog.text
         assert "conversation_message_count=1" in caplog.text
-        assert "provider unavailable" not in result
+        assert "provider unavailable" not in result.content
 
     def test_messages_sent_to_llm_are_bounded(self):
         planner = FakePlanner()
@@ -92,7 +93,7 @@ class TestConversation:
         agent = Agent(FakePlanner())
         agent._agent_graph.invoke = Mock(side_effect=GraphRecursionError("loop"))
 
-        assert agent.chat("Plan Rome", "thread") == TOOL_LOOP_RESPONSE
+        assert agent.chat("Plan Rome", "thread").content == TOOL_LOOP_RESPONSE
 
     def test_unexpected_graph_failure_has_a_safe_response(self):
         agent = Agent(FakePlanner())
@@ -100,8 +101,8 @@ class TestConversation:
 
         result = agent.chat("Plan Rome", "thread")
 
-        assert result == AGENT_ERROR_RESPONSE
-        assert "internal detail" not in result
+        assert result.content == AGENT_ERROR_RESPONSE
+        assert "internal detail" not in result.content
 
     @pytest.mark.parametrize("thread_id", ["", "   "])
     def test_blank_thread_id_is_rejected(self, thread_id):

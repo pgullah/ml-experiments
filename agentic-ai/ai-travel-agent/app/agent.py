@@ -1,4 +1,5 @@
 import logging
+from dataclasses import dataclass
 
 from langchain_core.messages import (
     AIMessage,
@@ -28,6 +29,12 @@ TOOL_LOOP_RESPONSE = (
     "I'm sorry, but I couldn't complete the plan within the allowed processing steps. "
     "Please make the request more specific and try again."
 )
+
+
+@dataclass
+class AgentResponse:
+    content: str
+    thread_id: str
 
 
 class Agent:
@@ -104,7 +111,7 @@ class Agent:
         return builder.compile(checkpointer=self.checkpointer)
 
     @travel_domain_guard()
-    def chat(self, query: str, thread_id: str):
+    def chat(self, query: str, thread_id: str) -> AgentResponse:
         if not thread_id or not thread_id.strip():
             raise ValueError("thread_id must not be empty")
 
@@ -120,9 +127,11 @@ class Agent:
             )
         except GraphRecursionError:
             logger.warning("Travel agent reached its graph recursion limit")
-            return TOOL_LOOP_RESPONSE
+            return AgentResponse(content=TOOL_LOOP_RESPONSE, thread_id=thread_id)
         except Exception:
             logger.exception("Travel agent graph execution failed")
-            return AGENT_ERROR_RESPONSE
+            return AgentResponse(content=AGENT_ERROR_RESPONSE, thread_id=thread_id)
         # The final output is the content of the last message in the state
-        return response_state["messages"][-1].content
+        return AgentResponse(
+            content=response_state["messages"][-1].content, thread_id=thread_id
+        )

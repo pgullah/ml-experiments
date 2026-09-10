@@ -50,6 +50,75 @@ uv run --group ui streamlit run streamlit_app.py
 Use **New conversation** in the sidebar to clear the current session. Each UI
 session owns a separate agent instance and thread ID.
 
+## REST API
+
+Set `TRAVEL_AGENT_API_KEY` in `.env` to a separate service secret, alongside the
+provider credentials. From `agentic-ai/ai-travel-agent/`, run:
+
+```shell
+uv sync
+uv run uvicorn api:app --host 0.0.0.0 --port 8000 --workers 1
+```
+
+Interactive documentation is at http://localhost:8000/docs. `GET /health` returns
+`{"status":"ok"}` without authentication and does not probe external providers.
+`POST /chat` requires a bearer token:
+
+```shell
+curl http://localhost:8000/chat \
+  -H 'Authorization: Bearer YOUR_SERVICE_TOKEN' \
+  -H 'Content-Type: application/json' \
+  -d '{"message":"Plan three days in Rome","thread_id":"telegram:123456"}'
+```
+
+The response is `{"content":"...","thread_id":"telegram:123456"}`. Reuse the
+thread ID for follow-ups; use a new ID to start a fresh conversation. Your bot
+should derive IDs from trusted Telegram chat/user metadata. The service token
+grants access to all conversations, so keep it in your bot backend.
+
+Requests require a nonblank `message` (up to `MAX_REQUEST_CHARACTERS`) and
+`thread_id` (up to 256 characters). Invalid input returns 422; invalid or missing
+authentication returns 401. Domain refusals and the agent's safe fallback replies
+use the normal 200 response schema. Unhandled failures return a generic 500.
+
+This initial API processes one chat request at a time. Concurrent requests receive
+503 with `Retry-After: 1`; the bot should queue messages per conversation and retry
+busy responses with backoff. Calls are synchronous and may take multiple provider
+requests to finish. Acknowledge Telegram webhooks before processing in a worker.
+Deduplicate Telegram updates in the bot; this API does not implement request IDs
+or retry deduplication. Avoid automatically retrying ambiguous timeouts.
+
+Run one worker and one replica: conversation history and guard context live in
+memory and are lost on restart. Shared persistence and concurrency coordination
+are needed before scaling. Keep the API on a private network, or use HTTPS when
+calling across hosts.
+
+## Docker
+
+From `agentic-ai/ai-travel-agent/`, build and start the REST API:
+
+```shell
+docker build -t ai-travel-agent .
+docker run --rm --env-file .env -p 8000:8000 ai-travel-agent
+```
+
+Open http://localhost:8000/docs. Create `.env` from `.env.example` and fill in your
+credentials before running; environment files are excluded from the image.
+If your `.env` lives in `agentic-ai/`, use `--env-file ../.env` instead.
+
+To start Streamlit instead:
+
+```shell
+docker run --rm --env-file .env -p 8501:8501 ai-travel-agent \
+  streamlit run streamlit_app.py --server.address=0.0.0.0 --server.headless=true
+```
+
+To run the command-line chat with the same image:
+
+```shell
+docker run --rm -it --env-file .env ai-travel-agent python main.py
+```
+
 ## Runtime behavior and limitations
 
 - Search results and price information are evidence, not confirmed booking

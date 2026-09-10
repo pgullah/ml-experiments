@@ -147,10 +147,11 @@ def travel_domain_guard(
                 return TRAVEL_REFUSAL
 
             result = method(self, query, *args, **kwargs)
+            response_text = result if isinstance(result, str) else result.content
             context_by_thread.setdefault(thread_id, []).extend(
                 [
                     f"user: {query[: settings.max_request_characters]}",
-                    f"assistant: {str(result)[: settings.max_context_characters]}",
+                    f"assistant: {response_text[: settings.max_context_characters]}",
                 ]
             )
             context_by_thread[thread_id] = context_by_thread[thread_id][

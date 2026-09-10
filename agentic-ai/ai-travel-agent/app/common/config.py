@@ -22,6 +22,7 @@ class AppSettings(BaseSettings):
 
     openrouter_api_key: SecretStr
     openrouter_model: str = "openrouter/free"
+    travel_agent_api_key: SecretStr | None = None
 
     openweathermap_api_key: SecretStr
     openweathermap_api_url: AnyHttpUrl = AnyHttpUrl(

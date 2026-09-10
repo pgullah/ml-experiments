@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "ddgs>=9.16.0",
+    "fastapi>=0.141.1",
     "langchain>=1.3.17",
     "langchain-openai>=1.6.0",
     "langchain-openrouter>=0.2.8",
@@ -14,10 +15,12 @@ dependencies = [
     "pydantic-settings>=2.0.0",
     "pyyaml>=6.0.0",
     "requests>=2.34.2",
+    "uvicorn>=0.30.0",
 ]
 
 [dependency-groups]
 dev = [
+    "httpx>=0.27.0",
     "pyright>=1.1.405",
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
@@ -35,7 +38,7 @@ addopts = "-ra"
 travel-agent = "main:chat"
 
 [tool.pyright]
-include = ["app", "main.py", "streamlit_app.py"]
+include = ["app", "api.py", "main.py", "streamlit_app.py"]
 pythonVersion = "3.12"
 venvPath = ".."
 venv = ".venv"

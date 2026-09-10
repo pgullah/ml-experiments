@@ -51,10 +51,11 @@ if prompt := st.chat_input("Where would you like to travel?"):
     with st.chat_message("assistant"):
         try:
             with st.spinner("Planning your trip..."):
-                response = st.session_state.agent.chat(
+                result = st.session_state.agent.chat(
                     prompt,
                     thread_id=st.session_state.thread_id,
                 )
+                response = result if isinstance(result, str) else result.content
         except ValueError as error:
             response = str(error)
 
