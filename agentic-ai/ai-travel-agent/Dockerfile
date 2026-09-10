@@ -16,9 +16,9 @@ RUN uv sync --no-dev --group ui --no-install-project
 RUN useradd --create-home --uid 10001 appuser
 COPY app/ ./app/
 COPY prompts/ ./prompts/
-COPY api.py main.py streamlit_app.py ./
+COPY main.py streamlit_app.py ./
 
 USER appuser
 EXPOSE 8000 8501
 
-CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+CMD ["uvicorn", "app.api:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

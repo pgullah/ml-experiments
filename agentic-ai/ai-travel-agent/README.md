@@ -57,8 +57,12 @@ provider credentials. From `agentic-ai/ai-travel-agent/`, run:
 
 ```shell
 uv sync
-uv run uvicorn api:app --host 0.0.0.0 --port 8000 --workers 1
+uv run python api.py
 ```
+
+This listens locally on `127.0.0.1:8000`. For development with automatic reload,
+use `uv run uvicorn api:app --reload --port 8000`. To accept connections from other
+hosts, use `uv run uvicorn api:app --host 0.0.0.0 --port 8000 --workers 1`.
 
 Interactive documentation is at http://localhost:8000/docs. `GET /health` returns
 `{"status":"ok"}` without authentication and does not probe external providers.

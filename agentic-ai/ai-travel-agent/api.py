@@ -2,6 +2,7 @@
 
 import logging
 from contextlib import asynccontextmanager
+import os
 from secrets import compare_digest
 from threading import Lock
 from typing import Annotated
@@ -101,3 +102,8 @@ def create_app(
 
 
 app = create_app()
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="127.0.0.1", port=int(os.getenv("PORT", 8000)))
