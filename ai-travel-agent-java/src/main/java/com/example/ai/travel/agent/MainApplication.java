@@ -1,25 +1,14 @@
 package com.example.ai.travel.agent;
 
-import org.springframework.boot.CommandLineRunner;
+import com.example.ai.travel.agent.config.ApiConfigurationProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.Bean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
 @SpringBootApplication
+@EnableConfigurationProperties(ApiConfigurationProperties.class)
 public class MainApplication {
-
-	public static void main(String[] args) {
-		SpringApplication.run(MainApplication.class, args);
-	}
-
-	@Bean
-	public CommandLineRunner runner(ChatClient.Builder builder) {
-		return args -> {
-			ChatClient chatClient = builder.build();
-			String response = chatClient.prompt("Tell me a joke").call().content();							
-			System.out.println(response);
-		};
-	}
-	// 
-
+    public static void main(String[] args) {
+        SpringApplication.run(MainApplication.class, args);
+    }
 }
